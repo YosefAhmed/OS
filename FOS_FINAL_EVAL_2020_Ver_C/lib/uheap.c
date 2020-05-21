@@ -30,42 +30,76 @@ void* malloc(uint32 size)
 		sizeInPages++;
 
 		for (int i = 0; i < sizeof(MEMORY_LIST)/sizeof(MEMORY_LIST[0]); ) {
-//			cprintf("------------------------ I = %d\n",i);
 			if(MEMORY_LIST[i].state == 0){
 				for (int j = i; j < i+sizeInPages; j++) {
-//					cprintf("\n%d - State => %d\n",j, MEMORY_LIST[j].state);
-
 					if(MEMORY_LIST[j].state == 1){
-//						cprintf("%d --- NOT EMBTY! ---\n",j);
 						i=j + MEMORY_LIST[j].sizeInPages;
 						found = 0;
 						break;
 					}
-//					cprintf("--- After if in internal loop ---%d\n",j);
 				}
-//				cprintf("--- After the internal loop ---\n");
 				if(found == 1){
-//					cprintf("--- EMPTY ---\n");
 					MEMORY_LIST[i].sizeInPages = sizeInPages;
 					MEMORY_LIST[i].state = 1;
 					sys_allocateMem(i*PAGE_SIZE+USER_HEAP_START, sizeInPages);
-//					cprintf("--- ALLOCATED  ---\n");
 					return (void*)(uint32*)((i*PAGE_SIZE)+USER_HEAP_START);
 				}
-//				cprintf("--- After the if of Found ---\n");
-
 			}
 			else{
-//				cprintf("--- in the Else of outer loop ---\n");
 				i += MEMORY_LIST[i].sizeInPages;
 			}
-//			cprintf("--- After the Else of Outer loop ---\n");
-
 		}
 		return NULL;
 	}
 	else if(sys_isUHeapPlacementStrategyBESTFIT()==1){
 		//2) BEST FIT strategy
+		int found = 0;
+		int sizeInPages = size/PAGE_SIZE ;
+		sizeInPages++;
+		int start = -1, end = -1, startPage = -1, minSpace = 2147483647;
+		cprintf("size in pages => %d\n",sizeInPages);
+		for (int i = 0; i < sizeof(MEMORY_LIST)/sizeof(MEMORY_LIST[0]); ) {
+			if(MEMORY_LIST[i].state == 0){
+				start = i;
+				startPage = start;
+				int j = i;
+				while(j < sizeof(MEMORY_LIST)/sizeof(MEMORY_LIST[0])){
+					end = j;
+					cprintf("%d - State -> %d\n",j,MEMORY_LIST[j].state);
+					if(MEMORY_LIST[j].state == 1){
+						if((end-start) < sizeInPages){
+							cprintf(" --- NOT SUTABLE --- \n");
+							i=j + MEMORY_LIST[j].sizeInPages;
+							break;
+						}
+						if((end-start) < minSpace){
+							minSpace = end-start;
+							startPage = start;
+							found = 1;
+						}
+					}
+					else {
+						j++;
+						if((j-start) == sizeInPages){
+							minSpace = j-start;
+							found = 1;
+							MEMORY_LIST[startPage].sizeInPages = sizeInPages;
+						    MEMORY_LIST[startPage].state = 1;
+							sys_allocateMem(startPage*PAGE_SIZE+USER_HEAP_START, sizeInPages);
+							return (void*)(uint32*)((startPage*PAGE_SIZE)+USER_HEAP_START);						}
+						}
+				}
+			}
+			else{
+				i += MEMORY_LIST[i].sizeInPages;
+			}
+		}
+		if(found == 1){
+			MEMORY_LIST[startPage].sizeInPages = sizeInPages;
+			MEMORY_LIST[startPage].state = 1;
+			sys_allocateMem(startPage*PAGE_SIZE+USER_HEAP_START, sizeInPages);
+			return (void*)(uint32*)((startPage*PAGE_SIZE)+USER_HEAP_START);
+		}
 		return NULL;
 	}
 	return NULL;
