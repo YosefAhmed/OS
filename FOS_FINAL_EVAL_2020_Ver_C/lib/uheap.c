@@ -41,6 +41,7 @@ void* malloc(uint32 size)
 				if(found == 1){
 					MEMORY_LIST[i].sizeInPages = sizeInPages;
 					MEMORY_LIST[i].state = 1;
+//					cprintf("Alocated Index : %d\n", i);
 					sys_allocateMem(i*PAGE_SIZE+USER_HEAP_START, sizeInPages);
 					return (void*)(uint32*)((i*PAGE_SIZE)+USER_HEAP_START);
 				}
@@ -57,7 +58,7 @@ void* malloc(uint32 size)
 		int sizeInPages = size/PAGE_SIZE ;
 		sizeInPages++;
 		int start = -1, end = -1, startPage = -1, minSpace = 2147483647;
-		cprintf("size in pages => %d\n",sizeInPages);
+//		cprintf("size in pages => %d\n",sizeInPages);
 		for (int i = 0; i < sizeof(MEMORY_LIST)/sizeof(MEMORY_LIST[0]); ) {
 			if(MEMORY_LIST[i].state == 0){
 				start = i;
@@ -65,10 +66,10 @@ void* malloc(uint32 size)
 				int j = i;
 				while(j < sizeof(MEMORY_LIST)/sizeof(MEMORY_LIST[0])){
 					end = j;
-					cprintf("%d - State -> %d\n",j,MEMORY_LIST[j].state);
+//					cprintf("%d - State -> %d\n",j,MEMORY_LIST[j].state);
 					if(MEMORY_LIST[j].state == 1){
 						if((end-start) < sizeInPages){
-							cprintf(" --- NOT SUTABLE --- \n");
+//							cprintf(" --- NOT SUTABLE --- \n");
 							i=j + MEMORY_LIST[j].sizeInPages;
 							break;
 						}
@@ -117,14 +118,12 @@ void* malloc(uint32 size)
 
 void free(void* virtual_address)
 {
-	panic("\nHELLOOOOOOOOZ from free()\n");
-	//TODO: [FINAL_EVAL_2020 - VER_C] - [2] USER HEAP [User Side free]
-	// Write your code here, remove the panic and write your code
-	panic("free() is not implemented yet...!!");
-
-	//you should get the size of the given allocation using its address
-
-	//refer to the documentation for details
+	int PageIndex =((int)virtual_address-USER_HEAP_START)/PAGE_SIZE;
+	int sizeInPages = MEMORY_LIST[PageIndex].sizeInPages;
+//	cprintf("Calculated index = %d\n",PageIndex );
+	MEMORY_LIST[PageIndex].sizeInPages = 0;
+	MEMORY_LIST[PageIndex].state = 0;
+	sys_freeMem((uint32)virtual_address, sizeInPages);
 }
 
 
