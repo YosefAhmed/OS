@@ -767,12 +767,10 @@ void allocateMem(struct Env* e, uint32 virtual_address, uint32 size)
 {
 	int c=0;
 	uint32 limit = ROUNDDOWN(virtual_address+(size*PAGE_SIZE),PAGE_SIZE);
-//	cprintf(" Limit => %p\n\n",limit);
 	for(uint32 i = virtual_address; i< limit;i+=PAGE_SIZE){
-//		cprintf("%d - address => %p\n", c, i);
 		int addResponse = pf_add_empty_env_page( e, i, 0);
 		if(addResponse == E_NO_PAGE_FILE_SPACE){
-			panic(" the page file is full, can’t add any more pages to it!!");
+			panic(" the page file is full, can not add any more pages to it!!");
 		}
 		c++;
 	}
@@ -785,8 +783,6 @@ void allocateMem(struct Env* e, uint32 virtual_address, uint32 size)
 void freeMem(struct Env* e, uint32 virtual_address, uint32 size)
 {
 		uint32 limit = ROUNDDOWN(virtual_address+(size*PAGE_SIZE),PAGE_SIZE);
-//		cprintf("Given Size : %d\n\n", size);
-//		cprintf("Start : %x ,\tLimit : %x \n",virtual_address, limit);
 		int c = 0, c2=0;
 
 		//1-
@@ -794,76 +790,48 @@ void freeMem(struct Env* e, uint32 virtual_address, uint32 size)
 				c++;
 				pf_remove_env_page(e, i);
 			}
-//			cprintf("STEP 1 -> %d\n", c);
-
 
 		//2-
 			c=0;
 			for (int i = e->page_last_WS_index; i>=0; i--) {
-//				cprintf("Index : %d ,\tWS Address : %p , \t Empty Flag: %d\n", i, e->ptr_pageWorkingSet[i].virtual_address, e->ptr_pageWorkingSet[i].empty);
 				if(e->ptr_pageWorkingSet[i].virtual_address >= virtual_address&&
 				   e->ptr_pageWorkingSet[i].virtual_address < limit)
 				{
 					c++;
-//					cprintf("-------------------- Free index : %x --------------\n",e->ptr_pageWorkingSet[i].virtual_address );
 					unmap_frame(e->env_page_directory, (void*) e->ptr_pageWorkingSet[i].virtual_address);
 					e->ptr_pageWorkingSet[i].virtual_address = 0;
 					e->ptr_pageWorkingSet[i].empty = 1;
 					e->ptr_pageWorkingSet[i].time_stamp = 0;
 				}
 			}
-//			cprintf("STEP 2 -> %d\n", c);
-//			env_page_ws_print(e);
 
 		//3-
 			c=0;
 
 			uint32* ptr_page_table = NULL;
 			int notEmpty = 0;
-//			cprintf("limit : %x\n",size * PAGE_SIZE);
 			for (uint32 i = virtual_address; i < limit; i+= PAGE_SIZE) {
-//				cprintf("current address : %x\n", i);
 				c++;
 				notEmpty = 0;
 				get_page_table(e->env_page_directory, (void*)i,&ptr_page_table);
-//				cprintf("page table : %x\n", ptr_page_table);
 				if(ptr_page_table != NULL){
 					for (int j = 0; j < 1024; j++) {
-//						cprintf("page[%d] : %x, \tpresent : %d\n",j,ptr_page_table[j],(ptr_page_table[j] & ~(PERM_PRESENT)));
 						if((ptr_page_table[j] & ~(PERM_PRESENT)) != 0){
-//							cprintf("+++++++++++ NOT EMPTY!! ++++++++++\n");
 							notEmpty = 1;
 							break;
 						}
 					}
 					if(notEmpty == 0){
-//						cprintf("//////////////> EMPTY <\\\\\\\\\\\\\\ \n");
 						c2++;
 						uint32 pa = e->env_page_directory[PDX(i)];
-						struct Frame_Info *frameInfo = to_frame_info(pa);//NULL;
-//						uint32* tmp = NULL;
-//						frameInfo = get_frame_info(e->env_page_directory,(void*)ptr_page_table,&tmp);
-	//					cprintf(" got frame info\n");
+						struct Frame_Info *frameInfo = to_frame_info(pa);
 						frameInfo->references = 0;
 						free_frame(frameInfo);
-
 						e->env_page_directory[PDX(i)] = 0;
 						tlbflush();
 					}
 				}
 			}
-
-//			cprintf("EMPTY>>> %d\n", c2);
-//			cprintf("STEP 3 -> %d\n", c);
-
-
-	 /*
-	  	Remove ONLY working set pages that are located in the given user virtual address range.
-		REMEMBER to Update the working sets after removing
-		2. Remove ONLY the EMPTY page tables in the given range
-		(i.e. no pages are mapped in it)
-		3. Remove ALL pages in the given range from the page file (see Appendix I).
-	 */
 
 	//This function should:
 	//1. Free ALL pages of the given range from the Page File
