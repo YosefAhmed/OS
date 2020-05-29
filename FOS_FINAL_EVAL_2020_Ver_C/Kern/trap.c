@@ -506,8 +506,6 @@ void page_fault_handler(struct Env * curenv, uint32 fault_va)
 	curenv->ptr_pageWorkingSet[curenv->page_last_WS_index].empty = 0;
 	curenv->page_last_WS_index++;
 
-	//refer to the documentation for details
-
 }
 
 

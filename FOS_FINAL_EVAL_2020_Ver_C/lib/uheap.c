@@ -56,6 +56,9 @@ void* malloc(uint32 size)
 					MEMORY_LIST[i].sizeInPages = sizeInPages;
 					MEMORY_LIST[i].state = 1;
 					sys_allocateMem(i*PAGE_SIZE+USER_HEAP_START, sizeInPages);
+
+					if(i > LAST_ALLOCATED_INDEX)
+						LAST_ALLOCATED_INDEX = i;
 					return (void*)(uint32*)((i*PAGE_SIZE)+USER_HEAP_START);
 				}
 			}
@@ -77,23 +80,23 @@ void* malloc(uint32 size)
 		if(sizeInPages > minSpace)
 			return NULL;
 		else{
-//		cprintf("size in pages: %d\n",sizeInPages);
+//		cprintf("-----size in pages: %d\n",sizeInPages);
 		for (int i = 0; i < sizeof(MEMORY_LIST)/sizeof(MEMORY_LIST[0]); ) {
 			if(MEMORY_LIST[i].state == 0){
 				start = i;
 				int j = i;
-//				cprintf("start: %d,\tend: %d,\tstartPage; %d,\tmin: %d,\n",start,end,startPage,minSpace);
+//				cprintf("-----start: %d,\tend: %d,\tstartPage; %d,\tmin: %d,\n",start,end,startPage,minSpace);
 				while(j < sizeof(MEMORY_LIST)/sizeof(MEMORY_LIST[0])){
 					if(i == LAST_ALLOCATED_INDEX && found == 1){
 						finished = 1;
 						break;
 					}
-//					cprintf("J: %d\n",j);
+//					cprintf("-----J: %d\n",j);
 //					cprintf("%d - State -> %d\n",j,MEMORY_LIST[j].state);
 					if(MEMORY_LIST[j].state == 1){
-//						cprintf("not empty\n");
+//						cprintf("-----not empty\n");
 						if((j-start) < sizeInPages){
-//							cprintf(" --- NOT SUTABLE --- %d\n",j);
+//							cprintf(" ---- NOT SUTABLE --- %d\n",j);
 							i=j + MEMORY_LIST[j].sizeInPages;
 							break;
 						}
@@ -107,9 +110,9 @@ void* malloc(uint32 size)
 					else {
 //						cprintf("-----end: %d,\tlast = %d\n",end,LAST_ALLOCATED_INDEX);
 						if((end-start) == sizeInPages){
-//							cprintf("\n---suitable---\n");
+//							cprintf("\n-----suitable---\n");
 							if(LAST_ALLOCATED_INDEX < j ){
-//								cprintf("end: %d,\tlast = %d\n",end,LAST_ALLOCATED_INDEX);
+//								cprintf("-----end: %d,\tlast = %d\n",end,LAST_ALLOCATED_INDEX);
 								LAST_ALLOCATED_INDEX = j;
 								finished = 1;
 								found = 1;
@@ -117,12 +120,13 @@ void* malloc(uint32 size)
 								break;
 							}
 							else{
-//								cprintf("j: %d\n",j);
+//								cprintf("-----j: %d\n",j);
 								int c=j;
 								while(MEMORY_LIST[c].state == 0 ){
 									c++;
+//									cprintf("-----c: %d\n",c);
 								}
-//								cprintf("c : %d\n",c);
+//								cprintf("-----c : %d\n",c);
 								if(c-j < minSpace){
 //									cprintf("\n---- FOUND ---\n");
 									minSpace = c-j;
@@ -187,8 +191,12 @@ void* malloc(uint32 size)
 
 void free(void* virtual_address)
 {
+//	cprintf("\n====================== free ===================\n");
 	int PageIndex =((int)virtual_address-USER_HEAP_START)/PAGE_SIZE;
 	int sizeInPages = MEMORY_LIST[PageIndex].sizeInPages;
+	MEMORY_LIST[PageIndex].sizeInPages = 0;
+	MEMORY_LIST[PageIndex].state = 0;
+//	cprintf("=== page index: %d\t=== size : %d,\t=== last : %d\n\n",PageIndex,sizeInPages,LAST_ALLOCATED_INDEX);
 	if(LAST_ALLOCATED_INDEX - sizeInPages == PageIndex){
 
 		for(int i = PageIndex;;i--)
@@ -200,9 +208,8 @@ void free(void* virtual_address)
 		}
 	}
 //	cprintf("Calculated index = %d\n",PageIndex );
-	MEMORY_LIST[PageIndex].sizeInPages = 0;
-	MEMORY_LIST[PageIndex].state = 0;
 	sys_freeMem((uint32)virtual_address, sizeInPages);
+//	cprintf("\n");
 }
 
 
