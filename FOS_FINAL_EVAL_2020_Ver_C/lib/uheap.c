@@ -27,11 +27,15 @@ void* malloc(uint32 size)
 
 		int found = 1;
 		int sizeInPages = size/PAGE_SIZE ;
-		sizeInPages++;
+		if(size % PAGE_SIZE != 0)
+			sizeInPages++;
 
+		int x = 0;
 		for (int i = 0; i < sizeof(MEMORY_LIST)/sizeof(MEMORY_LIST[0]); ) {
+			found = 1;
 			if(MEMORY_LIST[i].state == 0){
 				for (int j = i; j < i+sizeInPages; j++) {
+					x=j;
 					if(MEMORY_LIST[j].state == 1){
 						i=j + MEMORY_LIST[j].sizeInPages;
 						found = 0;
@@ -41,7 +45,6 @@ void* malloc(uint32 size)
 				if(found == 1){
 					MEMORY_LIST[i].sizeInPages = sizeInPages;
 					MEMORY_LIST[i].state = 1;
-//					cprintf("Alocated Index : %d\n", i);
 					sys_allocateMem(i*PAGE_SIZE+USER_HEAP_START, sizeInPages);
 					return (void*)(uint32*)((i*PAGE_SIZE)+USER_HEAP_START);
 				}
@@ -56,39 +59,60 @@ void* malloc(uint32 size)
 		//2) BEST FIT strategy
 		int found = 0;
 		int sizeInPages = size/PAGE_SIZE ;
-		sizeInPages++;
+		if(size % PAGE_SIZE != 0)
+			sizeInPages++;
 		int start = -1, end = -1, startPage = -1, minSpace = 2147483647;
-//		cprintf("size in pages => %d\n",sizeInPages);
+		cprintf("size in pages: %d\n",sizeInPages);
 		for (int i = 0; i < sizeof(MEMORY_LIST)/sizeof(MEMORY_LIST[0]); ) {
 			if(MEMORY_LIST[i].state == 0){
+
 				start = i;
-				startPage = start;
+//				startPage = start;
 				int j = i;
+				cprintf("start: %d,\tend: %d,\tstartPage; %d,\tmin: %d,\n",start,end,startPage,minSpace);
 				while(j < sizeof(MEMORY_LIST)/sizeof(MEMORY_LIST[0])){
 					end = j;
+					cprintf("J: %d\n",j);
 //					cprintf("%d - State -> %d\n",j,MEMORY_LIST[j].state);
 					if(MEMORY_LIST[j].state == 1){
 						if((end-start) < sizeInPages){
-//							cprintf(" --- NOT SUTABLE --- \n");
+							cprintf(" --- NOT SUTABLE --- %d\n",j);
 							i=j + MEMORY_LIST[j].sizeInPages;
 							break;
 						}
-						if((end-start) < minSpace){
-							minSpace = end-start;
-							startPage = start;
-							found = 1;
-						}
+//						if((end-start) < minSpace){
+//							minSpace = end-start;
+//							startPage = start;
+//							found = 1;
+//						}
 					}
 					else {
-						j++;
-						if((j-start) == sizeInPages){
-							minSpace = j-start;
-							found = 1;
-							MEMORY_LIST[startPage].sizeInPages = sizeInPages;
-						    MEMORY_LIST[startPage].state = 1;
-							sys_allocateMem(startPage*PAGE_SIZE+USER_HEAP_START, sizeInPages);
-							return (void*)(uint32*)((startPage*PAGE_SIZE)+USER_HEAP_START);						}
+//						cprintf("////////////////// 7amada \\\\\\\\\\\\\\\\ \n");
+						if((end-start) == sizeInPages){
+							int c=end;
+							while(MEMORY_LIST[c].state == 0 ){
+//							cprintf("+++++++++++++++ Maiada +++++++++++++++++ \n");
+								if(c-end > end-start)
+									break;
+								c++;
+							}
+								cprintf("c : %d\n",c);
+							if(c-end < minSpace){
+								cprintf("\n---- FOUND ---\n");
+								minSpace = c-end;
+								startPage = start;
+								break;
+								found = 1;
+							}
+							i=c + MEMORY_LIST[c].sizeInPages;
+//							found = 1;
+//							MEMORY_LIST[startPage].sizeInPages = sizeInPages;
+//						    MEMORY_LIST[startPage].state = 1;
+//							sys_allocateMem(startPage*PAGE_SIZE+USER_HEAP_START, sizeInPages);
+//							return (void*)(uint32*)((startPage*PAGE_SIZE)+USER_HEAP_START);						}
 						}
+						j++;
+					}
 				}
 			}
 			else{
@@ -99,6 +123,7 @@ void* malloc(uint32 size)
 			MEMORY_LIST[startPage].sizeInPages = sizeInPages;
 			MEMORY_LIST[startPage].state = 1;
 			sys_allocateMem(startPage*PAGE_SIZE+USER_HEAP_START, sizeInPages);
+			cprintf("------ Allocated -------\n");
 			return (void*)(uint32*)((startPage*PAGE_SIZE)+USER_HEAP_START);
 		}
 		return NULL;
